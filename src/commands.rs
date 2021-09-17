@@ -166,7 +166,16 @@ fn compress_files(
                 Gzip => Box::new(flate2::write::GzEncoder::new(encoder, Default::default())),
                 Bzip => Box::new(bzip2::write::BzEncoder::new(encoder, Default::default())),
                 Lzma => Box::new(xz2::write::XzEncoder::new(encoder, 6)),
-                _ => unreachable!(),
+
+                Zstd => {
+                    let zstd_encoder = zstd::stream::write::Encoder::new(encoder, Default::default());
+                    // Safety:
+                    //     Encoder::new() can only fail if `level` is invalid, but Default::default()
+                    //     is guaranteed to be valid
+                    Box::new(zstd_encoder.unwrap().auto_finish())
+                }
+                // Already should have covered Zip and Tar cases
+                Zip | Tar => unreachable!(),
             };
             encoder
         };
